@@ -11,8 +11,8 @@ class MyRobotNode(Node):
         self.get_logger().info('Hello World from SE_mobile_robot_controller!')
 
         # Goal coordinates (initialized to origin)
-        self.goal_x = 0.0
-        self.goal_y = 0.0
+        self.goal_x = None
+        self.goal_y = None
 
         # Controller gains
         self.Kp_yaw = 3.0  # Proportional gain for yaw control
@@ -65,48 +65,49 @@ class MyRobotNode(Node):
         # Log pose and angles
         self.get_logger().info(f'Pose: x={x:.3f}, y={y:.3f}, z={z:.3f}')
         self.get_logger().info(f'Angles: roll={roll:.3f}, pitch={pitch:.3f}, yaw={yaw*180/math.pi:.3f}')
-
-        error_x = self.goal_x - x
-        error_y = self.goal_y - y
-        error_yaw = math.atan2(error_y, error_x) - yaw
-        while(error_yaw > math.pi):
-            error_yaw -= 2 * math.pi
-        while(error_yaw < -math.pi):
-            error_yaw += 2 * math.pi
         
-        # Calculate distance to goal
-        distance_error = math.sqrt(error_x**2 + error_y**2)
+        if self.goal_x is not None and self.goal_y is not None:
+            error_x = self.goal_x - x
+            error_y = self.goal_y - y
+            error_yaw = math.atan2(error_y, error_x) - yaw
+            while(error_yaw > math.pi):
+                error_yaw -= 2 * math.pi
+            while(error_yaw < -math.pi):
+                error_yaw += 2 * math.pi
+            
+            # Calculate distance to goal
+            distance_error = math.sqrt(error_x**2 + error_y**2)
 
-        self.get_logger().info(f'Error: x={error_x:.3f}, y={error_y:.3f}, distance={distance_error:.3f}, yaw={error_yaw*180/math.pi:.3f}')
+            self.get_logger().info(f'Error: x={error_x:.3f}, y={error_y:.3f}, distance={distance_error:.3f}, yaw={error_yaw*180/math.pi:.3f}')
 
-        # Proportional controller for yaw
-        angular_velocity = self.Kp_yaw * error_yaw
+            # Proportional controller for yaw
+            angular_velocity = self.Kp_yaw * error_yaw
 
-        # Proportional controller for linear velocity
-        # Only move forward if roughly facing the goal (within 30 degrees)
-        heading_tolerance = math.pi / 6  # 30 degrees
-        if abs(error_yaw) < heading_tolerance:
-            linear_velocity = self.Kp_linear * distance_error
-            # Limit linear velocity
-            max_linear_vel = 0.5  # m/s
-            if distance_error > 0.01:
-                linear_velocity = min(max_linear_vel, linear_velocity)
-            else:   
-                linear_velocity = 0
-        else:
-            linear_velocity = 0.0  # Don't move forward if not facing goal
+            # Proportional controller for linear velocity
+            # Only move forward if roughly facing the goal (within 30 degrees)
+            heading_tolerance = math.pi / 6  # 30 degrees
+            if abs(error_yaw) < heading_tolerance:
+                linear_velocity = self.Kp_linear * distance_error
+                # Limit linear velocity
+                max_linear_vel = 0.5  # m/s
+                if distance_error > 0.01:
+                    linear_velocity = min(max_linear_vel, linear_velocity)
+                else:   
+                    linear_velocity = 0
+            else:
+                linear_velocity = 0.0  # Don't move forward if not facing goal
 
-        # Limit angular velocity to reasonable bounds
-        max_angular_vel = 4.0  # rad/s
-        angular_velocity = max(-max_angular_vel, min(max_angular_vel, angular_velocity))
+            # Limit angular velocity to reasonable bounds
+            max_angular_vel = 4.0  # rad/s
+            angular_velocity = max(-max_angular_vel, min(max_angular_vel, angular_velocity))
 
-        # Create and publish cmd_vel message
-        cmd_vel_msg = Twist()
-        cmd_vel_msg.linear.x = linear_velocity
-        cmd_vel_msg.angular.z = angular_velocity
-        self.cmd_vel_publisher.publish(cmd_vel_msg)
+            # Create and publish cmd_vel message
+            cmd_vel_msg = Twist()
+            cmd_vel_msg.linear.x = linear_velocity
+            cmd_vel_msg.angular.z = angular_velocity
+            self.cmd_vel_publisher.publish(cmd_vel_msg)
 
-        self.get_logger().info(f'Command: linear_x={linear_velocity:.3f}, angular_z={angular_velocity:.3f}')
+            self.get_logger().info(f'Command: linear_x={linear_velocity:.3f}, angular_z={angular_velocity:.3f}')
 
 def main(args=None):
     rclpy.init(args=args)
