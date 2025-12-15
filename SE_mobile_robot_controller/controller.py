@@ -70,6 +70,7 @@ class MyRobotNode(Node):
             error_x = self.goal_x - x
             error_y = self.goal_y - y
             error_yaw = math.atan2(error_y, error_x) - yaw
+
             while(error_yaw > math.pi):
                 error_yaw -= 2 * math.pi
             while(error_yaw < -math.pi):
@@ -80,6 +81,9 @@ class MyRobotNode(Node):
 
             self.get_logger().info(f'Error: x={error_x:.3f}, y={error_y:.3f}, distance={distance_error:.3f}, yaw={error_yaw*180/math.pi:.3f}')
 
+            if distance_error < 0.02:
+                return
+            
             # Proportional controller for yaw
             angular_velocity = self.Kp_yaw * error_yaw
 
@@ -98,7 +102,7 @@ class MyRobotNode(Node):
                 linear_velocity = 0.0  # Don't move forward if not facing goal
 
             # Limit angular velocity to reasonable bounds
-            max_angular_vel = 4.0  # rad/s
+            max_angular_vel = 3.0  # rad/s
             angular_velocity = max(-max_angular_vel, min(max_angular_vel, angular_velocity))
 
             # Create and publish cmd_vel message
